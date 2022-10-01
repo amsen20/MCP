@@ -1,0 +1,118 @@
+/*
+*	In His Exalted Name
+*	Matrix Addition - Sequential Code
+*	Ahmad Siavashi, Email: siavashi@aut.ac.ir
+*	15/04/2018
+*/
+
+// Let it be.
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <omp.h>
+
+
+typedef struct {
+	int *A, *B, *C;
+	int n, m;
+} DataSet;
+
+void fillDataSet(DataSet *dataSet);
+void printDataSet(DataSet dataSet);
+void closeDataSet(DataSet dataSet);
+void add(DataSet dataSet);
+
+const int NUM = 10, N = 2, M = 2;
+
+int main(int argc, char *argv[]) {
+	DataSet dataSet;
+	if (argc < 3) {
+		printf("[-] Invalid No. of arguments.\n");
+		printf("[-] Try -> <n> <m> \n");
+		printf(">>> ");
+		scanf("%d %d", &dataSet.n, &dataSet.m);
+	}
+	else {
+		dataSet.n = atoi(argv[1]);
+		dataSet.m = atoi(argv[2]);
+	}
+
+	omp_set_dynamic(0);
+	omp_set_num_threads(N * M);
+
+	fillDataSet(&dataSet);
+	
+	double starttime = omp_get_wtime();
+	for (int i=0 ; i<NUM ; i++)
+		add(dataSet);
+	double elapsedtime = omp_get_wtime() - starttime;
+	printf("Time Elapsed: %f\n", elapsedtime/NUM);
+	
+	// printDataSet(dataSet);
+	closeDataSet(dataSet);
+	return EXIT_SUCCESS;
+}
+
+void fillDataSet(DataSet *dataSet) {
+	int i, j;
+
+	dataSet->A = (int *)malloc(sizeof(int) * dataSet->n * dataSet->m);
+	dataSet->B = (int *)malloc(sizeof(int) * dataSet->n * dataSet->m);
+	dataSet->C = (int *)malloc(sizeof(int) * dataSet->n * dataSet->m);
+
+	srand(0);
+
+	for (i = 0; i < dataSet->n; i++) {
+		for (j = 0; j < dataSet->m; j++) {
+			dataSet->A[i*dataSet->m + j] = rand() % 100;
+			dataSet->B[i*dataSet->m + j] = rand() % 100;
+		}
+	}
+}
+
+void printDataSet(DataSet dataSet) {
+	int i, j;
+
+	printf("[-] Matrix A\n");
+	for (i = 0; i < dataSet.n; i++) {
+		for (j = 0; j < dataSet.m; j++) {
+			printf("%-4d", dataSet.A[i*dataSet.m + j]);
+		}
+		putchar('\n');
+	}
+
+	printf("[-] Matrix B\n");
+	for (i = 0; i < dataSet.n; i++) {
+		for (j = 0; j < dataSet.m; j++) {
+			printf("%-4d", dataSet.B[i*dataSet.m + j]);
+		}
+		putchar('\n');
+	}
+
+	printf("[-] Matrix C\n");
+	for (i = 0; i < dataSet.n; i++) {
+		for (j = 0; j < dataSet.m; j++) {
+			printf("%-8d", dataSet.C[i*dataSet.m + j]);
+		}
+		putchar('\n');
+	}
+}
+
+void closeDataSet(DataSet dataSet) {
+	free(dataSet.A);
+	free(dataSet.B);
+	free(dataSet.C);
+}
+
+void add(DataSet dataSet) {
+	int i, j, k;
+    int stepx = (dataSet.n + N-1) / N;
+    int stepy = (dataSet.m + M-1) / M;
+	#pragma omp parallel for private(i, j, k)
+    for(k = 0 ; k < N*M ; k ++)
+        for (i = (k/M) * stepx; i < min(dataSet.n, (k/M + 1) * stepx); i++)
+            for (j = (k % M) * stepy; j < min(dataSet.m, (k % M + 1) * stepy); j++)
+                dataSet.C[i * dataSet.m + j] = dataSet.A[i * dataSet.m + j] + dataSet.B[i * dataSet.m + j];
+}
